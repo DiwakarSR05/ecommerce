@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <style>
+        /* Ensure the footer sticks to the bottom */
+        html, body {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            flex: 1;
+        }
+        footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">Checkout</h2>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'core:checkout_success' %}"  enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <label for="payment-method">Choose a payment option:</label>
+            <select id="payment-method">
+                <option value="">-- Select Payment Method --</option>
+                <option value="esewa">Esewa</option>
+                <option value="khalti">Khalti</option>
+            </select>
+
+            <div id="qr-container" style="margin-top: 5px;"></div>
+
+            <button type="submit" class="btn btn-success btn-block">Place Order</button>
+        </form>
+
+        <!-- JavaScript for Dynamic District Loading and QR Code Display -->
+        
+<script>
+    const districtsByProvince = {
+        '1': [['Bhojpur', 'Bhojpur'], ['Dhankuta', 'Dhankuta'], ['Ilam', 'Ilam'], ['Jhapa', 'Jhapa'], ['Khotang', 'Khotang'], ['Morang', 'Morang'], ['Okhaldhunga', 'Okhaldhunga'], ['Panchthar', 'Panchthar'], ['Sankhuwasabha', 'Sankhuwasabha'], ['Solukhumbu', 'Solukhumbu'], ['Sunsari', 'Sunsari'], ['Taplejung', 'Taplejung'], ['Terhathum', 'Terhathum'], ['Udayapur', 'Udayapur']],
+        '2': [['Parsa', 'Parsa'], ['Bara', 'Bara'], ['Rautahat', 'Rautahat'], ['Sarlahi', 'Sarlahi'], ['Dhanusha', 'Dhanusha'], ['Siraha', 'Siraha'], ['Mahottari', 'Mahottari'], ['Saptari', 'Saptari']],
+        '3': [['Bhaktapur', 'Bhaktapur'], ['Chitwan', 'Chitwan'], ['Dhading', 'Dhading'], ['Dolakha', 'Dolakha'], ['Kathmandu', 'Kathmandu'], ['Kavrepalanchok', 'Kavrepalanchok'], ['Lalitpur', 'Lalitpur'], ['Nuwakot', 'Nuwakot'], ['Ramechhap', 'Ramechhap'], ['Rasuwa', 'Rasuwa'], ['Sindhuli', 'Sindhuli'], ['Sindhupalchok', 'Sindhupalchok']],
+        '4': [['Baglung', 'Baglung'], ['Gorkha', 'Gorkha'], ['Kaski', 'Kaski'], ['Lamjung', 'Lamjung'], ['Manang', 'Manang'], ['Mustang', 'Mustang'], ['Myagdi', 'Myagdi'], ['Nawalpur', 'Nawalpur'], ['Parbat', 'Parbat'], ['Syangja', 'Syangja'], ['Tanahun', 'Tanahun']],
+        '5': [['Arghakhanchi', 'Arghakhanchi'], ['Banke', 'Banke'], ['Bardiya', 'Bardiya'], ['Dang', 'Dang'], ['Gulmi', 'Gulmi'], ['Kapilvastu', 'Kapilvastu'], ['Palpa', 'Palpa'], ['Pyuthan', 'Pyuthan'], ['Rolpa', 'Rolpa'], ['Rukum', 'Rukum'], ['Rupandehi', 'Rupandehi']],
+        '6': [['Dailekh', 'Dailekh'], ['Dolpa', 'Dolpa'], ['Humla', 'Humla'], ['Jajarkot', 'Jajarkot'], ['Jumla', 'Jumla'], ['Kalikot', 'Kalikot'], ['Mugu', 'Mugu'], ['Salyan', 'Salyan'], ['Surkhet', 'Surkhet'], ['Western Rukum', 'Western Rukum']],
+        '7': [['Achham', 'Achham'], ['Baitadi', 'Baitadi'], ['Bajhang', 'Bajhang'], ['Bajura', 'Bajura'], ['Dadeldhura', 'Dadeldhura'], ['Darchula', 'Darchula'], ['Doti', 'Doti'], ['Kailali', 'Kailali'], ['Kanchanpur', 'Kanchanpur']],
+    };
+
+    function loadDistricts(select) {
+        const districtSelect = document.querySelector('select[name="district"]');
+        const selectedProvince = select.value;
+
+        // Clear existing options
+        districtSelect.innerHTML = '<option value="">Select District</option>';
+
+        if (selectedProvince && districtsByProvince[selectedProvince]) {
+            districtsByProvince[selectedProvince].forEach(([value, label]) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                districtSelect.appendChild(option);
+            });
+        }
+    }
+
+    // Trigger district loading on page load if a province is already selected
+    document.addEventListener('DOMContentLoaded', function () {
+        const provinceSelect = document.querySelector('select[name="province"]');
+        if (provinceSelect && provinceSelect.value) {
+            loadDistricts(provinceSelect);
+        }
+    });
+
+            document.addEventListener("DOMContentLoaded", function () {
+                const paymentSelect = document.getElementById("payment-method");
+                const qrContainer = document.getElementById("qr-container");
+
+                paymentSelect.addEventListener("change", function () {
+                    qrContainer.innerHTML = ""; // Clear previous content
+
+                    const selectedMethod = this.value;
+                    let imagePath = "";
+
+                    if (selectedMethod === "esewa") {
+                        imagePath = "{% static 'images/Esewa_QR.jpg' %}"; // Ensure this file is in static/images/
+                    } else if (selectedMethod === "khalti") {
+                        imagePath = "{% static 'images/Khalti_QR.jpg' %}"; // Ensure this file is in static/images/
+                    }
+
+                    if (imagePath) {
+                        const imgElement = document.createElement("img");
+                        imgElement.src = imagePath;
+                        imgElement.alt = selectedMethod + " QR Code";
+                        imgElement.style.width = "150px";
+                        imgElement.style.height = "150px";
+                        imgElement.style.marginTop = "20px";
+                        qrContainer.appendChild(imgElement);
+                    }
+                });
+            });
+        </script>
+
+        {% include "order_snippet.html" with order=object %}
+    </div>
+
+    <footer class="my-5 pt-5 text-muted text-center text-small">
+        <p class="mb-1">&copy; 2024-2025 FitPlay Store</p>
+        <ul class="list-inline">
+            <li class="list-inline-item"><a href="#">Privacy</a></li>
+            <li class="list-inline-item"><a href="#">Terms</a></li>
+            <li class="list-inline-item"><a href="#">Support</a></li>
+        </ul>
+    </footer>
+</body>
+</html>
+{% endblock content %}
